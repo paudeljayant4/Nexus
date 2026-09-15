@@ -1,0 +1,23 @@
+{
+  "name": "@nexus/auth",
+  "version": "0.0.1",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "lint": "eslint src --ext .ts"
+  },
+  "dependencies": {
+    "@nexus/types": "workspace:*",
+    "jose": "^5.2.0",
+    "bcryptjs": "^2.4.3",
+    "zod": "^3.22.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.0",
+    "eslint": "^8.56.0",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^20.11.0"
+  }
+}

@@ -1,0 +1,490 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── v0.1 Base Models ─────────────────────────────────────────────
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  name         String
+  passwordHash String?  @map("password_hash")
+  avatarUrl    String?  @map("avatar_url")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  goals        Goal[]
+  tasks        Task[]
+  taskEvents   TaskEvent[]
+
+  // v1: Auth
+  sessions     Session[]
+  settings     UserSetting?
+
+  // v2: Tags, Comments
+  tags         Tag[]
+  taskComments TaskComment[]
+
+  // v3: Calendar
+  dailyPlans   DailyPlan[]
+  timeBlocks   TimeBlock[]
+
+  // v4: Habits
+  habits       Habit[]
+  habitLogs    HabitLog[]
+
+  // v5: Memory
+  memories     Memory[]
+  knowledgeNodes KnowledgeNode[]
+
+  // v6: Agents
+  agents       Agent[]
+  agentRuns    AgentRun[]
+
+  // v7: Analytics
+  insights     Insight[]
+
+  @@map("users")
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+  @@map("sessions")
+}
+
+// ─── v0.1: Goals & Tasks ──────────────────────────────────────────
+
+model Goal {
+  id          String     @id @default(uuid())
+  userId      String     @map("user_id")
+  title       String     @db.VarChar(200)
+  description String?
+  status      GoalStatus @default(ACTIVE)
+  priority    Int        @default(5)
+  targetDate  DateTime?  @map("target_date")
+  metadata    Json?      @map("metadata")
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tasks       Task[]
+
+  @@index([userId])
+  @@map("goals")
+}
+
+model Task {
+  id               String       @id @default(uuid())
+  userId           String       @map("user_id")
+  goalId           String?      @map("goal_id")
+  parentId         String?      @map("parent_id")
+  title            String       @db.VarChar(300)
+  description      String?
+  status           TaskStatus   @default(PENDING)
+  priority         Int          @default(5)
+  dueDate          DateTime?    @map("due_date")
+  scheduledDate    DateTime?    @map("scheduled_date")
+  scheduledTime    String?      @map("scheduled_time")
+  estimatedMinutes Int?         @map("estimated_minutes")
+  actualMinutes    Int?         @map("actual_minutes")
+  metadata         Json?      @map("metadata")
+  sortOrder        Int          @default(0) @map("sort_order")
+  createdAt        DateTime     @default(now()) @map("created_at")
+  updatedAt        DateTime     @updatedAt @map("updated_at")
+  completedAt      DateTime?    @map("completed_at")
+
+  user             User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  goal             Goal?        @relation(fields: [goalId], references: [id], onDelete: SetNull)
+  parent           Task?        @relation("Subtasks", fields: [parentId], references: [id], onDelete: SetNull)
+  subtasks         Task[]       @relation("Subtasks")
+  events           TaskEvent[]
+  comments         TaskComment[]
+  tags             TaskTag[]
+  timeBlocks       TimeBlock[]
+
+  @@index([userId])
+  @@index([goalId])
+  @@index([status])
+  @@index([parentId])
+  @@index([scheduledDate])
+  @@index([sortOrder])
+  @@map("tasks")
+}
+
+model TaskEvent {
+  id        String        @id @default(uuid())
+  taskId    String        @map("task_id")
+  userId    String        @map("user_id")
+  type      TaskEventType
+  metadata  Json?
+  createdAt DateTime      @default(now()) @map("created_at")
+
+  task      Task          @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+  @@index([userId])
+  @@index([type])
+  @@map("task_events")
+}
+
+// ─── v2: Subtasks, Comments, Tags ─────────────────────────────────
+
+model TaskComment {
+  id        String   @id @default(uuid())
+  taskId    String   @map("task_id")
+  userId    String   @map("user_id")
+  content   String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+  @@map("task_comments")
+}
+
+model Tag {
+  id     String @id @default(uuid())
+  userId String @map("user_id")
+  name   String @db.VarChar(50)
+  color  String @default("#6366f1")
+
+  user   User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tasks  TaskTag[]
+
+  @@unique([userId, name])
+  @@index([userId])
+  @@map("tags")
+}
+
+model TaskTag {
+  taskId String @map("task_id")
+  tagId  String @map("tag_id")
+
+  task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  tag    Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([taskId, tagId])
+  @@map("task_tags")
+}
+
+// ─── v3: Calendar, Daily Plans, Time Blocks ───────────────────────
+
+model DailyPlan {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  date        DateTime @db.Date
+  notes       String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  timeBlocks  TimeBlock[]
+
+  @@unique([userId, date])
+  @@index([userId])
+  @@index([date])
+  @@map("daily_plans")
+}
+
+model TimeBlock {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  planId      String?  @map("plan_id")
+  taskId      String?  @map("task_id")
+  title       String   @db.VarChar(200)
+  startTime   DateTime @map("start_time")
+  endTime     DateTime @map("end_time")
+  type        TimeBlockType @default(TASK)
+  color       String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan        DailyPlan? @relation(fields: [planId], references: [id], onDelete: SetNull)
+  task        Task?    @relation(fields: [taskId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([planId])
+  @@index([taskId])
+  @@index([startTime])
+  @@map("time_blocks")
+}
+
+// ─── v4: Habits ───────────────────────────────────────────────────
+
+model Habit {
+  id           String    @id @default(uuid())
+  userId       String    @map("user_id")
+  name         String    @db.VarChar(100)
+  description  String?
+  frequency    HabitFrequency @default(DAILY)
+  targetCount  Int       @default(1) @map("target_count")
+  color        String    @default("#10b981")
+  icon         String?
+  active       Boolean   @default(true)
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  logs         HabitLog[]
+
+  @@index([userId])
+  @@index([active])
+  @@map("habits")
+}
+
+model HabitLog {
+  id        String   @id @default(uuid())
+  habitId   String   @map("habit_id")
+  userId    String   @map("user_id")
+  date      DateTime @db.Date
+  count     Int      @default(1)
+  notes     String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  habit     Habit    @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([habitId, date])
+  @@index([habitId])
+  @@index([userId])
+  @@index([date])
+  @@map("habit_logs")
+}
+
+// ─── v5: Memory & Knowledge Graph ─────────────────────────────────
+
+model Memory {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  title      String   @db.VarChar(200)
+  content    String
+  type       MemoryType @default(NOTE)
+  tags       Json?
+  embedding  Unsupported("vector(1536)")?
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  nodes      KnowledgeNode[]
+
+  @@index([userId])
+  @@index([type])
+  @@map("memories")
+}
+
+model KnowledgeNode {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  memoryId  String?  @map("memory_id")
+  label     String   @db.VarChar(200)
+  type      NodeType @default(CONCEPT)
+  metadata  Json?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  memory    Memory?  @relation(fields: [memoryId], references: [id], onDelete: SetNull)
+  edgesFrom KnowledgeEdge[] @relation("SourceNode")
+  edgesTo   KnowledgeEdge[] @relation("TargetNode")
+
+  @@index([userId])
+  @@index([type])
+  @@index([memoryId])
+  @@map("knowledge_nodes")
+}
+
+model KnowledgeEdge {
+  id        String   @id @default(uuid())
+  sourceId  String   @map("source_id")
+  targetId  String   @map("target_id")
+  relation  String   @db.VarChar(100)
+  weight    Float    @default(1.0)
+  metadata  Json?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  source    KnowledgeNode @relation("SourceNode", fields: [sourceId], references: [id], onDelete: Cascade)
+  target    KnowledgeNode @relation("TargetNode", fields: [targetId], references: [id], onDelete: Cascade)
+
+  @@unique([sourceId, targetId, relation])
+  @@index([sourceId])
+  @@index([targetId])
+  @@map("knowledge_edges")
+}
+
+// ─── v6: AI Agents ────────────────────────────────────────────────
+
+model Agent {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  name        String   @db.VarChar(100)
+  description String?
+  type        AgentType @default(ASSISTANT)
+  config      Json?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  runs        AgentRun[]
+
+  @@index([userId])
+  @@map("agents")
+}
+
+model AgentRun {
+  id         String     @id @default(uuid())
+  agentId    String     @map("agent_id")
+  userId     String     @map("user_id")
+  status     RunStatus  @default(PENDING)
+  input      Json?
+  output     Json?
+  error      String?
+  startedAt  DateTime?  @map("started_at")
+  completedAt DateTime? @map("completed_at")
+  createdAt  DateTime   @default(now()) @map("created_at")
+
+  agent      Agent      @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([agentId])
+  @@index([userId])
+  @@index([status])
+  @@map("agent_runs")
+}
+
+// ─── v7: Analytics & Insights ─────────────────────────────────────
+
+model Insight {
+  id         String      @id @default(uuid())
+  userId     String      @map("user_id")
+  type       InsightType
+  title      String      @db.VarChar(200)
+  content    String
+  data       Json?
+  priority   Int         @default(5)
+  read       Boolean     @default(false)
+  createdAt  DateTime    @default(now()) @map("created_at")
+
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([type])
+  @@index([read])
+  @@map("insights")
+}
+
+// ─── User Settings ────────────────────────────────────────────────
+
+model UserSetting {
+  id        String   @id @default(uuid())
+  userId    String   @unique @map("user_id")
+  timezone  String   @default("UTC")
+  weekStart Int      @default(1) @map("week_start")
+  theme     String   @default("system")
+  aiProvider String? @map("ai_provider")
+  aiModel   String?  @map("ai_model")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_settings")
+}
+
+// ─── Enums ────────────────────────────────────────────────────────
+
+enum GoalStatus {
+  ACTIVE
+  COMPLETED
+  ARCHIVED
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  DONE
+  SKIPPED
+}
+
+enum TaskEventType {
+  CREATED
+  UPDATED
+  STATUS_CHANGED
+  COMPLETED
+  SKIPPED
+  RANKED
+  AI_SUGGESTED
+}
+
+enum TimeBlockType {
+  TASK
+  BREAK
+  MEETING
+  FOCUS
+  PERSONAL
+  OTHER
+}
+
+enum HabitFrequency {
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+enum MemoryType {
+  NOTE
+  JOURNAL
+  IDEA
+  BOOKMARK
+  SNIPPET
+}
+
+enum NodeType {
+  CONCEPT
+  PERSON
+  PROJECT
+  TAG
+  GOAL
+  MEMORY
+  RESOURCE
+}
+
+enum AgentType {
+  ASSISTANT
+  SCHEDULER
+  ANALYZER
+  SUGGESTER
+}
+
+enum RunStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum InsightType {
+  PRODUCTIVITY
+  HABIT_STREAK
+  GOAL_PROGRESS
+  SCHEDULE_OPTIMIZATION
+  WEEKLY_SUMMARY
+  AI_SUGGESTION
+}

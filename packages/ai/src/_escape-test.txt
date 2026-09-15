@@ -1,0 +1,3 @@
+line1: single backslash n: \n end
+line2: double backslash n: \\n end
+line3: triple backslash n: \\\n end

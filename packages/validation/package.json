@@ -1,0 +1,20 @@
+{
+  "name": "@nexus/validation",
+  "version": "0.0.1",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "lint": "eslint src --ext .ts"
+  },
+  "dependencies": {
+    "@nexus/types": "workspace:*",
+    "zod": "^3.22.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.0",
+    "eslint": "^8.56.0",
+    "@types/node": "^20.11.0"
+  }
+}
