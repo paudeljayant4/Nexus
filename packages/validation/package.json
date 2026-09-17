@@ -4,7 +4,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc",
+    "build": "pnpm --filter @nexus/types build && tsc",
     "dev": "tsc --watch",
     "lint": "eslint src --ext .ts"
   },
