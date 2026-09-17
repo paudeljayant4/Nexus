@@ -316,9 +316,9 @@ export const taskEventRepository = {
     taskId: string;
     userId: string;
     type: TaskEventType;
-    metadata?: Prisma.InputJsonValue;
+    metadata?: Prisma.JsonValue;
   }): Promise<void> {
-    await prisma.taskEvent.create({ data });
+    await prisma.taskEvent.create({ data: data as any });
   },
 
   async findByTaskId(taskId: string): Promise<any[]> {

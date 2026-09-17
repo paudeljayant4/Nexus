@@ -37,7 +37,7 @@ export async function POST(
       tasks,
       now: new Date().toISOString(),
       pastEvents,
-      outcomeSummary,
+      outcomeSummary: outcomeSummary ?? undefined,
     });
 
     await Promise.all(rankings.map(r => 

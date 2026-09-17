@@ -26,4 +26,8 @@ export function getEnv(): Env {
   return cachedEnv;
 }
 
-export const env = getEnv();
+export const env = new Proxy({} as Env, {
+  get(_target, property: string) {
+    return getEnv()[property as keyof Env];
+  },
+});

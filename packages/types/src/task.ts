@@ -40,7 +40,7 @@ export const CreateTaskSchema = z.object({
   scheduledTime: z.string().optional(),
   estimatedMinutes: z.number().int().positive().optional(),
   sortOrder: z.number().int().optional(),
-  metadata: MetadataSchema.optional(),
+  metadata: MetadataSchema.partial().optional(),
 });
 export type CreateTask = z.infer<typeof CreateTaskSchema>;
 

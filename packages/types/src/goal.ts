@@ -27,7 +27,7 @@ export const CreateGoalSchema = z.object({
   status: GoalStatusSchema,
   priority: z.number().int().min(1).max(10),
   targetDate: z.string().datetime().optional(),
-  metadata: MetadataSchema.optional(),
+  metadata: MetadataSchema.partial().optional(),
 });
 export type CreateGoal = z.infer<typeof CreateGoalSchema>;
 
