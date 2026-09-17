@@ -39,8 +39,12 @@ export default function HabitsPage() {
   const [formFreq, setFormFreq] = useState('DAILY');
   const [formTarget, setFormTarget] = useState('1');
   const [formColor, setFormColor] = useState('#10b981');
-  const [logDate, setLogDate] = useState(new Date().toISOString().split('T')[0]);
+  const [logDate, setLogDate] = useState('');
   const [logCount, setLogCount] = useState('1');
+
+  useEffect(() => {
+    setLogDate(new Date().toISOString().split('T')[0]);
+  }, []);
 
   useEffect(() => {
     if (user) loadData();

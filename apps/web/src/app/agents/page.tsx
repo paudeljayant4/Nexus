@@ -55,8 +55,12 @@ export default function AgentsPage() {
   const [runningAgent, setRunningAgent] = useState<string | null>(null);
   const [briefing, setBriefing] = useState<Briefing | null>(null);
   const [briefingLoading, setBriefingLoading] = useState(false);
-  const [autoScheduleDate, setAutoScheduleDate] = useState(new Date().toISOString().split('T')[0]);
+  const [autoScheduleDate, setAutoScheduleDate] = useState('');
   const [autoScheduleLoading, setAutoScheduleLoading] = useState(false);
+
+  useEffect(() => {
+    setAutoScheduleDate(new Date().toISOString().split('T')[0]);
+  }, []);
   const [autoScheduleResult, setAutoScheduleResult] = useState<any>(null);
 
   useEffect(() => {

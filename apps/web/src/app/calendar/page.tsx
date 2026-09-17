@@ -49,7 +49,7 @@ function getDaysInMonth(year: number, month: number): Date[] {
 
 export default function CalendarPage() {
   const { user } = useAuth();
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const [currentDate, setCurrentDate] = useState<Date | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [timeBlocks, setTimeBlocks] = useState<TimeBlock[]>([]);
   const [loading, setLoading] = useState(true);
@@ -62,10 +62,15 @@ export default function CalendarPage() {
   const [viewMode, setViewMode] = useState<'month' | 'week'>('month');
 
   useEffect(() => {
-    if (user) loadData();
+    setCurrentDate(new Date());
+  }, []);
+
+  useEffect(() => {
+    if (user && currentDate) loadData();
   }, [user, currentDate]);
 
   async function loadData() {
+    if (!currentDate || !user) return;
     setLoading(true);
     try {
       const year = currentDate.getFullYear();
@@ -115,10 +120,10 @@ export default function CalendarPage() {
     }
   }
 
-  const year = currentDate.getFullYear();
-  const month = currentDate.getMonth();
+  const year = currentDate?.getFullYear() ?? 1970;
+  const month = currentDate?.getMonth() ?? 0;
   const days = useMemo(() => getDaysInMonth(year, month), [year, month]);
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = currentDate?.toISOString().split('T')[0] ?? '';
 
   const tasksByDate = useMemo(() => {
     const map: Record<string, Task[]> = {};
