@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { goalRepository, taskRepository, taskEventRepository } from '@nexus/database';
-import { getAIGateway, createAIGateway, summarizeOutcomeHistory } from '@nexus/ai';
-import { env } from '@nexus/config';
+import { getAIGateway, summarizeOutcomeHistory } from '@nexus/ai';
 import { getUserFromRequest, unauthorizedResponse } from '@nexus/auth';
 
 export const dynamic = 'force-dynamic';
@@ -15,14 +14,14 @@ export async function POST(
     if (!user) return unauthorizedResponse();
     if (user.userId !== params.userId) return unauthorizedResponse();
 
-    const gateway = getAIGateway() ?? createAIGateway({
-      provider: 'google',
-      apiKey: env.GEMINI_API_KEY,
-    });
+    const gateway = getAIGateway();
+    if (!gateway) {
+      return NextResponse.json({ error: 'No AI provider is configured' }, { status: 503 });
+    }
 
     const [goals, tasks, pastEvents] = await Promise.all([
       goalRepository.findByUserId(params.userId),
-      taskRepository.findByUserId(params.userId, ['pending', 'in_progress']),
+      taskRepository.findByUserId(params.userId, ['PENDING', 'IN_PROGRESS']),
       taskEventRepository.findByUserId(params.userId, 20),
     ]);
 

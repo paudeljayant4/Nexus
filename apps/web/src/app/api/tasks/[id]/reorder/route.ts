@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { getUserFromRequest, unauthorizedResponse } from '@nexus/auth';
-import { taskRepository } from '@nexus/database';
+import { prisma, taskRepository } from '@nexus/database';
 import { validate, validators } from '@nexus/validation';
 
 export async function POST(
@@ -31,6 +31,21 @@ export async function POST(
       return Response.json(
         { data: null, error: { code: 'VALIDATION_ERROR', message: validation.errors.flatten() } },
         { status: 400 }
+      );
+    }
+
+    const requestedTaskIds = new Set(validation.data.taskIds);
+    const ownedTaskCount = await prisma.task.count({
+      where: {
+        id: { in: Array.from(requestedTaskIds) },
+        userId: user.userId,
+      },
+    });
+
+    if (ownedTaskCount !== requestedTaskIds.size) {
+      return Response.json(
+        { data: null, error: { code: 'FORBIDDEN', message: 'All reordered tasks must belong to the authenticated user' } },
+        { status: 403 }
       );
     }
 

@@ -66,11 +66,19 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    const rangeStart = new Date(`${date}T00:00:00`);
+    const rangeEnd = new Date(`${date}T23:59:59.999`);
+    const existingBlocks = await timeBlockRepository.findByUserId(user.userId, rangeStart, rangeEnd);
+    const scheduledTaskIds = new Set(
+      existingBlocks.flatMap((block) => block.taskId ? [block.taskId] : [])
+    );
+
     const createdBlocks = [];
-    for (const block of timeBlocks) {
+    for (const block of timeBlocks.filter((block) => !scheduledTaskIds.has(block.taskId))) {
       const startDateTime = new Date(`${date}T${block.startTime}:00`);
       const endDateTime = new Date(`${date}T${block.endTime}:00`);
       const created = await timeBlockRepository.create(user.userId, {
+        taskId: block.taskId,
         title: block.title,
         startTime: startDateTime.toISOString(),
         endTime: endDateTime.toISOString(),

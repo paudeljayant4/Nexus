@@ -24,7 +24,13 @@ export async function GET(
       );
     }
 
-    const timeBlocks = await timeBlockRepository.findByUserId(params.userId, new Date(startDate), new Date(endDate));
+    const rangeStart = new Date(startDate);
+    const rangeEnd = new Date(endDate);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
+      rangeEnd.setUTCDate(rangeEnd.getUTCDate() + 1);
+    }
+
+    const timeBlocks = await timeBlockRepository.findByUserId(params.userId, rangeStart, rangeEnd);
     return Response.json({ data: timeBlocks, error: null });
   } catch (error) {
     console.error('Error fetching time blocks:', error);

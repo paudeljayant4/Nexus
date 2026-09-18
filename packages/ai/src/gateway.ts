@@ -66,11 +66,28 @@ export class AIGateway {
 
 let gatewayInstance: AIGateway | null = null;
 
+function createGatewayFromEnvironment(): AIGateway | null {
+  const geminiApiKey = process.env.GEMINI_API_KEY;
+  if (geminiApiKey) {
+    return new AIGateway({ provider: 'google', apiKey: geminiApiKey });
+  }
+
+  const openAIApiKey = process.env.OPENAI_API_KEY;
+  if (openAIApiKey) {
+    return new AIGateway({ provider: 'openai', apiKey: openAIApiKey });
+  }
+
+  return null;
+}
+
 export function createAIGateway(config: AIGatewayConfig): AIGateway {
   gatewayInstance = new AIGateway(config);
   return gatewayInstance;
 }
 
 export function getAIGateway(): AIGateway | null {
+  if (!gatewayInstance) {
+    gatewayInstance = createGatewayFromEnvironment();
+  }
   return gatewayInstance;
 }
