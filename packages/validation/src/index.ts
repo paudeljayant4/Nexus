@@ -41,7 +41,10 @@ export const validators = {
   updateUserSetting: UpdateUserSettingSchema,
 };
 
-export function validate<T>(schema: z.ZodSchema<T>, data: unknown): { success: true; data: T } | { success: false; errors: z.ZodError } {
+export function validate<T extends z.ZodTypeAny>(
+  schema: T,
+  data: unknown
+): { success: true; data: z.output<T> } | { success: false; errors: z.ZodError } {
   const result = schema.safeParse(data);
   if (result.success) {
     return { success: true, data: result.data };
