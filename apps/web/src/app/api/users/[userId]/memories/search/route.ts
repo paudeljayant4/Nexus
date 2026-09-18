@@ -1,4 +1,4 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromRequest, unauthorizedResponse } from '@nexus/auth';
 import { memoryRepository } from '@nexus/database';
 

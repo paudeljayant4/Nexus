@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { taskRepository } from '@nexus/database';
 import { validate } from '@nexus/validation';
-import { CreateTaskSchema } from '@nexus/types';
+import { CreateTaskSchema, TaskStatus, TaskStatusSchema } from '@nexus/types';
 import { getUserFromRequest, unauthorizedResponse } from '@nexus/auth';
 
 export async function GET(
@@ -14,7 +14,17 @@ export async function GET(
     if (user.userId !== params.userId) return unauthorizedResponse();
 
     const { searchParams } = new URL(request.url);
-    const statuses = searchParams.get('statuses')?.split(',');
+    const requestedStatuses = searchParams.get('statuses')?.split(',');
+    const parsedStatuses = requestedStatuses?.map((status) => {
+      const parsed = TaskStatusSchema.safeParse(status);
+      return parsed.success ? parsed.data : null;
+    });
+
+    if (parsedStatuses?.some((status) => status === null)) {
+      return NextResponse.json({ error: 'Invalid task status filter' }, { status: 400 });
+    }
+
+    const statuses = parsedStatuses as TaskStatus[] | undefined;
     const tasks = await taskRepository.findByUserId(params.userId, statuses);
     return NextResponse.json(tasks);
   } catch (error) {

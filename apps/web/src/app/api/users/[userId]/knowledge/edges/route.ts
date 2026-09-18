@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { getUserFromRequest, unauthorizedResponse } from '@nexus/auth';
-import { knowledgeRepository } from '@nexus/database';
+import { knowledgeRepository, prisma } from '@nexus/database';
 import { validate, validators } from '@nexus/validation';
 
 export async function POST(
@@ -18,6 +18,22 @@ export async function POST(
       return Response.json(
         { data: null, error: { code: 'VALIDATION_ERROR', message: validation.errors } },
         { status: 400 }
+      );
+    }
+
+    const nodeIds = Array.from(new Set([validation.data.sourceId, validation.data.targetId]));
+    const ownedNodes = await prisma.knowledgeNode.findMany({
+      where: {
+        id: { in: nodeIds },
+        userId: user.userId,
+      },
+      select: { id: true },
+    });
+
+    if (ownedNodes.length !== nodeIds.length) {
+      return Response.json(
+        { data: null, error: { code: 'NOT_FOUND', message: 'One or more knowledge nodes were not found' } },
+        { status: 404 }
       );
     }
 

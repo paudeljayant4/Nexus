@@ -173,12 +173,12 @@ export const goalRepository = {
 // ─── Task Repository ──────────────────────────────────────────────
 
 export const taskRepository = {
-  async findByUserId(userId: string, statuses?: string[]): Promise<Task[]> {
+  async findByUserId(userId: string, statuses?: Task['status'][]): Promise<Task[]> {
     const tasks = await prisma.task.findMany({
       where: {
         userId,
         parentId: null,
-        status: statuses ? { in: statuses as any } : { not: 'DONE' },
+        status: statuses ? { in: statuses } : { not: 'DONE' },
       },
       orderBy: [{ sortOrder: 'asc' }, { priority: 'desc' }, { dueDate: 'asc' }, { createdAt: 'asc' }],
     });
@@ -431,8 +431,8 @@ export const timeBlockRepository = {
     const blocks = await prisma.timeBlock.findMany({
       where: {
         userId,
-        startTime: { gte: start },
-        endTime: { lte: end },
+        startTime: { lt: end },
+        endTime: { gt: start },
       },
       orderBy: { startTime: 'asc' },
     });

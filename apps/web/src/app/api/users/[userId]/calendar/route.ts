@@ -23,9 +23,17 @@ export async function GET(
       );
     }
 
+    const rangeStart = new Date(startDate);
+    const rangeEnd = new Date(endDate);
+    const dateOnlyEnd = /^\d{4}-\d{2}-\d{2}$/.test(endDate);
+    if (dateOnlyEnd) {
+      rangeEnd.setUTCDate(rangeEnd.getUTCDate() + 1);
+    }
+    const planEnd = dateOnlyEnd ? new Date(rangeEnd.getTime() - 1) : rangeEnd;
+
     const [plans, timeBlocks] = await Promise.all([
-      dailyPlanRepository.findInRange(params.userId, new Date(startDate), new Date(endDate)),
-      timeBlockRepository.findByUserId(params.userId, new Date(startDate), new Date(endDate)),
+      dailyPlanRepository.findInRange(params.userId, rangeStart, planEnd),
+      timeBlockRepository.findByUserId(params.userId, rangeStart, rangeEnd),
     ]);
 
     return Response.json({ data: { plans, timeBlocks }, error: null });
